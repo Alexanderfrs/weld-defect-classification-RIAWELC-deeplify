@@ -26,7 +26,8 @@ def generate_gradcam_overlay(
         )
         grayscale_cam = cam(input_tensor=image_tensor, targets=targets)[0]
 
-    image = image_tensor[0, 0].detach().cpu().numpy()
+    image = image_tensor[0, 0].detach().cpu().float()
+    image = (image * 0.5 + 0.5).clamp(0.0, 1.0).numpy()
     image = (image - image.min()) / (image.max() - image.min() + 1e-8)
     image_rgb = np.repeat(image[..., None], 3, axis=2)
     return show_cam_on_image(image_rgb, grayscale_cam, use_rgb=True)
