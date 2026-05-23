@@ -1,0 +1,30 @@
+Claude.md
+Tasks.md
+
+# Daten (zu groß für git)
+data/
+
+# Trainierte Modelle
+outputs/models/
+
+# W&B Logs
+wandb/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Virtual Environment
+.venv/
+
+# Plots müssen committed werden (für README)
+# outputs/plots/ ist daher NICHT ignoriert
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
