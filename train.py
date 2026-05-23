@@ -28,6 +28,14 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def parse_devices(devices: str) -> str | int | list[int]:
+    if devices == "auto":
+        return devices
+    if "," in devices:
+        return [int(device.strip()) for device in devices.split(",") if device.strip()]
+    return int(devices)
+
+
 def main() -> None:
     args = parse_args()
     pl.seed_everything(args.seed, workers=True)
@@ -54,7 +62,7 @@ def main() -> None:
     trainer = pl.Trainer(
         max_epochs=args.max_epochs,
         accelerator=args.accelerator,
-        devices=args.devices,
+        devices=parse_devices(args.devices),
         callbacks=callbacks,
         logger=logger,
         deterministic=True,

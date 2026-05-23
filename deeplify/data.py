@@ -71,14 +71,14 @@ class RIAWELCDataModule(pl.LightningDataModule):
                 )
             return
 
-        index_dataset = datasets.ImageFolder(root=self.data_dir)
-        train_len = int(len(index_dataset) * self.train_split)
-        val_len = int(len(index_dataset) * self.val_split)
-        test_len = len(index_dataset) - train_len - val_len
+        split_source_dataset = datasets.ImageFolder(root=self.data_dir)
+        train_len = int(len(split_source_dataset) * self.train_split)
+        val_len = int(len(split_source_dataset) * self.val_split)
+        test_len = len(split_source_dataset) - train_len - val_len
 
         generator = torch.Generator().manual_seed(self.seed)
         train_indices, val_indices, test_indices = random_split(
-            range(len(index_dataset)),
+            range(len(split_source_dataset)),
             lengths=[train_len, val_len, test_len],
             generator=generator,
         )

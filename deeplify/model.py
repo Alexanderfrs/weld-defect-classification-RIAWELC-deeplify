@@ -57,7 +57,7 @@ class WeldDefectClassifier(pl.LightningModule):
     def test_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> None:
         self._shared_step(batch, "test")
 
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> dict[str, object]:
         optimizer = torch.optim.AdamW(
             self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay
         )
