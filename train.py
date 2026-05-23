@@ -34,7 +34,7 @@ def parse_devices(devices: str) -> str | int | list[int]:
     if "," in devices:
         parts = [device.strip() for device in devices.split(",")]
         if any(not part for part in parts):
-            raise ValueError("Invalid --devices value: empty device entry detected")
+            raise ValueError("Invalid --devices value: found empty entry in comma-separated list")
         return [int(part) for part in parts]
     return int(devices)
 

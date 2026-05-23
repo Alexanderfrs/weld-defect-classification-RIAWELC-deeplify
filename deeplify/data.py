@@ -81,6 +81,8 @@ class RIAWELCDataModule(pl.LightningDataModule):
         train_len = int(len(source_dataset) * self.train_split)
         val_len = int(len(source_dataset) * self.val_split)
         test_len = len(source_dataset) - train_len - val_len
+        if test_len <= 0:
+            raise ValueError("Split configuration leaves no samples for the test split")
 
         generator = torch.Generator().manual_seed(self.seed)
         train_indices, val_indices, test_indices = random_split(

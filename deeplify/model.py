@@ -61,7 +61,8 @@ class WeldDefectClassifier(pl.LightningModule):
         optimizer = torch.optim.AdamW(
             self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay
         )
-        t_max = max(int(getattr(self.trainer, "max_epochs", 1) or 1), 1)
+        max_epochs = getattr(self.trainer, "max_epochs", None)
+        t_max = max(int(max_epochs or 1), 1)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=t_max)
         return {
             "optimizer": optimizer,

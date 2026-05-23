@@ -26,6 +26,7 @@ def generate_gradcam_overlay(
         )
         grayscale_cam = cam(input_tensor=image_tensor, targets=targets)[0]
 
+    # Reverse Normalize(mean=[0.5], std=[0.5]) used by the datamodule.
     image = image_tensor[0, 0].detach().cpu().float()
     image = (image * 0.5 + 0.5).clamp(0.0, 1.0).numpy()
     image_rgb = np.repeat(image[..., None], 3, axis=2)
