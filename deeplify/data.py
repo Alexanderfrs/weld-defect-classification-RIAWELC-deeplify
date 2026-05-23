@@ -30,9 +30,9 @@ class RIAWELCDataModule(pl.LightningDataModule):
         self.image_size = image_size
         self.seed = seed
         if not (0 < self.train_split < 1):
-            raise ValueError("train_split must be between 0 and 1")
+            raise ValueError("train_split must be in the open interval (0, 1)")
         if not (0 < self.val_split < 1):
-            raise ValueError("val_split must be between 0 and 1")
+            raise ValueError("val_split must be in the open interval (0, 1)")
         if self.train_split + self.val_split >= 1:
             raise ValueError("train_split + val_split must be < 1 to leave test data")
 
