@@ -32,7 +32,10 @@ def parse_devices(devices: str) -> str | int | list[int]:
     if devices == "auto":
         return devices
     if "," in devices:
-        return [int(device.strip()) for device in devices.split(",") if device.strip()]
+        parts = [device.strip() for device in devices.split(",")]
+        if any(not part for part in parts):
+            raise ValueError("Invalid --devices value: empty device entry detected")
+        return [int(part) for part in parts]
     return int(devices)
 
 
