@@ -1,11 +1,9 @@
-Claude.md
-Tasks.md
-
 # Daten (zu groß für git)
 data/
 
-# Trainierte Modelle
+# Trainierte Modelle & Plots (zu groß / generierbar)
 outputs/models/
+outputs/plots/
 
 # W&B Logs
 wandb/
@@ -18,9 +16,6 @@ __pycache__/
 
 # Virtual Environment
 .venv/
-
-# Plots müssen committed werden (für README)
-# outputs/plots/ ist daher NICHT ignoriert
 
 # IDE
 .vscode/
