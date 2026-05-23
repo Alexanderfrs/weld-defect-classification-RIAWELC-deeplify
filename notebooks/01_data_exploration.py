@@ -247,7 +247,7 @@ if __name__ == "__main__":
         n = sum(len(index[split][cls]) for cls in CLASS_MAP.values())
         print(f"  {split:12s}: {n} Bilder")
 
-    print("\n[1/2] Klassenverteilung plotten...")
+    print("\n[1/3] Klassenverteilung plotten...")
     plot_class_distribution(index)
 
     print("[2/3] Beispielbilder plotten...")
@@ -266,3 +266,56 @@ Diese Werte in transforms.Normalize(mean=[{mean:.4f}], std=[{std:.4f}]) eintrage
 """)
 
     print("Fertig. Plots gespeichert in outputs/plots/")
+
+
+# =============================================================================
+# ERKENNTNISSE AUS DER DATENEXPLORATION (Schritt 1.2)
+# =============================================================================
+#
+# KLASSENVERTEILUNG:
+#   CR (Cracks):             7.635 Bilder  (31%) — größte Klasse
+#   LP (Lack of Penetration):6.320 Bilder  (26%)
+#   ND (No Defect):          6.000 Bilder  (25%)
+#   PO (Porosity):           4.452 Bilder  (18%) — kleinste Klasse
+#
+#   → Mild unbalanciert (CR ist 1.7× häufiger als PO), KEIN dramatisches
+#     Ungleichgewicht. NoDifetto ist entgegen der Erwartung NICHT dominant —
+#     der Datensatz wurde vermutlich absichtlich ausgeglichen.
+#   → Focal Loss bleibt sinnvoll (PO ist auch visuell schwieriger), aber
+#     Class-Weights spielen eine kleinere Rolle als erwartet.
+#
+# VISUELLE UNTERSCHIEDE DER KLASSEN:
+#   CR (Cracks): Scharfe, dunkle Linien quer durch die Schweißnaht.
+#                Gut erkennbar, wenn ausgeprägt — aber feine Risse können
+#                subtil sein.
+#   LP (Lack of Penetration): Längliche, helle oder dunkle Bereiche an der
+#                Nahtwurzel. Kann CR ähneln → erwartete Verwechslungsquelle.
+#   PO (Porosity): Runde, dunkle Punkte (Gaseinschlüsse). Oft mehrere auf
+#                einmal. Visuell am distinktivsten, aber klein.
+#   ND (No Defect): Gleichmäßige Textur, keine deutlichen Merkmale.
+#                Herausforderung: schwache Defekte in CR/LP/PO könnten wie
+#                ND aussehen.
+#
+#   → Kritische Verwechslungspaare: CR↔LP (beide lineare Strukturen),
+#     schwache PO↔ND (kleine Poren vs. gleichmäßige Textur).
+#
+# PIXELSTATISTIKEN (Training-Split, skaliert auf [0,1]):
+#   mean = 0.6023  (entspricht Pixelwert ~154 von 255)
+#   std  = 0.1951
+#
+#   → Bilder sind generell hell (Röntgenstrahlen werden vom Metall absorbiert,
+#     d.h. gesundes Metall = helle Pixel; Defekte = dunklere Bereiche).
+#   → Diese Werte in transforms.Normalize(mean=[0.6023], std=[0.1951])
+#     verwenden. Damit werden Pixelwerte auf ~N(0,1) normalisiert.
+#
+# PREDEFINED SPLIT (von den Dataset-Autoren):
+#   Training: 15.863 (65%) | Validation: 6.101 (25%) | Test: 2.443 (10%)
+#   → Ungewöhnlich viele Validation-Daten (25% statt üblicher 10-15%).
+#   → Wir verwenden den vordefinierten Split (nicht sklearn), um Vergleich
+#     mit der Originalpublikation zu ermöglichen.
+#
+# IMPLIKATIONEN FÜR DAS TRAINING:
+#   - Focal Loss: γ=2, α als inverse Klassenfrequenz (PO bekommt höheres Gewicht)
+#   - Augmentation: Rotation/Flip sinnvoll (kein natürliches "oben" bei Patches)
+#   - Eval-Fokus: Recall pro Klasse, besonders für PO (seltene, schwierige Klasse)
+# =============================================================================
