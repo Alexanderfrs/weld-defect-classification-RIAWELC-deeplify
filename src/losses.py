@@ -49,6 +49,10 @@ class FocalLoss(nn.Module):
         else:
             self.alpha = None
         self.gamma = gamma
+        if reduction not in {"mean", "sum"}:
+            raise ValueError(
+                f"Unsupported reduction='{reduction}'. Expected one of: 'mean', 'sum'."
+            )
         self.reduction = reduction
 
     def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
