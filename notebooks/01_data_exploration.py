@@ -197,13 +197,15 @@ def compute_pixel_statistics(index: dict[str, dict[str, list[Path]]]) -> tuple[f
     histogram = np.zeros(256, dtype=np.int64)
 
     for path in all_paths:
-        arr = np.array(Image.open(path), dtype=np.float32) / 255.0  # → [0, 1]
+        # Bild nur einmal laden und für beide Auswertungen wiederverwenden
+        raw = np.array(Image.open(path))
+        arr = raw.astype(np.float32) / 255.0  # → [0, 1]
+
         pixel_sum += arr.sum()
         pixel_sq_sum += (arr ** 2).sum()
         n_pixels += arr.size
 
         # Für das Histogramm: Rohwerte [0, 255]
-        raw = np.array(Image.open(path))
         hist, _ = np.histogram(raw, bins=256, range=(0, 255))
         histogram += hist
 
