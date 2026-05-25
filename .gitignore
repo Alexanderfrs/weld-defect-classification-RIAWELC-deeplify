@@ -1,0 +1,25 @@
+# Daten (zu groß für git)
+data/
+
+# Trainierte Modelle & Plots (zu groß / generierbar)
+outputs/models/
+outputs/plots/
+
+# W&B Logs
+wandb/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Virtual Environment
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store

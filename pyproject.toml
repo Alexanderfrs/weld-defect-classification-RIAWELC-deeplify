@@ -1,0 +1,29 @@
+[project]
+name = "ndt-defect-classification"
+version = "0.1.0"
+description = "Weld defect classification on RIAWELC dataset using ResNet50 + PyTorch Lightning"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "torch>=2.3.0",           # Deep-Learning-Framework: Tensoren, Autograd, Modell-Definitionen
+    "torchvision>=0.18.0",    # ResNet50-Backbone + vortrainierte ImageNet-Gewichte
+    "lightning>=2.3.0",       # Training-Boilerplate (Trainer, Callbacks, Logging-Hooks)
+    "torchmetrics>=1.4.0",    # Metriken (Accuracy, Recall) thread-safe und GPU-kompatibel
+    "wandb>=0.17.0",          # Experiment-Tracking: Hyperparameter, Loss-Kurven, Plots
+    "grad-cam>=1.5.0",        # Grad-CAM Explainability (pip-Name für pytorch-grad-cam)
+    "scikit-learn>=1.5.0",    # Stratifizierter Train/Val/Test-Split + Classification Report
+    "matplotlib>=3.9.0",      # Alle Plots: Confusion Matrix, Histogramme, Bild-Grids
+    "Pillow>=10.0.0",         # Bilder laden (PNG → PIL Image → Tensor)
+    "numpy>=1.26.0",          # Array-Operationen für Evaluation und Plotting
+]
+
+# PyTorch CUDA 12.4 Index (kompatibel mit GTX 1650 Ti + Treiber 595)
+# "explicit = true" bedeutet: nur torch/torchvision kommen von dort, andere Pakete
+# weiterhin von PyPI — so gibt es keine Konflikte
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu124" }]
+torchvision = [{ index = "pytorch-cu124" }]
