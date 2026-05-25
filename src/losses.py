@@ -105,6 +105,9 @@ def compute_class_weights(class_counts: list[int]) -> torch.Tensor:
     Returns:
         1D-FloatTensor der Länge len(class_counts).
     """
+    if any(count <= 0 for count in class_counts):
+        raise ValueError("class_counts must contain only positive values.")
+
     counts = torch.tensor(class_counts, dtype=torch.float)
     n_total = counts.sum()
     n_classes = len(class_counts)
