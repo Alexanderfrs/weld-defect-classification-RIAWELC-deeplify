@@ -204,8 +204,12 @@ class WeldDefectDataset(Dataset):
         img_path, label = self.samples[idx]
 
         # Bild als Graustufenbild öffnen (L = Luminance = 1 Kanal)
-        # PIL öffnet lazy — erst .load() oder eine Operation lädt Pixel
-        img = Image.open(img_path).convert("L")
+        # PIL öffnet lazy — erst .load() oder eine Operation lädt Pixel.
+        # Über den Context-Manager wird das File-Handle deterministisch
+        # geschlossen, was insbesondere mit DataLoader-Multiprocessing
+        # offene Handles vermeidet.
+        with Image.open(img_path) as img:
+            img = img.convert("L")
 
         # Transform anwenden: PIL Image → FloatTensor (1, 224, 224)
         tensor = self.transform(img)
