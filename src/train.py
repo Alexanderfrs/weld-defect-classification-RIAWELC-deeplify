@@ -252,10 +252,12 @@ def train(run_key: str) -> dict:
         max_epochs=cfg["max_epochs"],
         accelerator="auto",    # GPU wenn vorhanden, sonst CPU
         devices=1,
+        precision="16-mixed",  # AMP: fp16-Aktivierungen, fp32-Mastergewichte — halbes VRAM
+        gradient_clip_val=1.0, # Gradient Clipping: verhindert Explosion bei Full-Finetuning
         logger=wandb_logger,
         callbacks=[checkpoint_cb, early_stop_cb],
-        log_every_n_steps=10,  # Nicht jeden einzelnen Step loggen (zu viel Rauschen)
-        deterministic=True,    # Reproduzierbare Ergebnisse (etwas langsamer)
+        log_every_n_steps=10,
+        deterministic=False,   # AMP + deterministic=True nicht kompatibel
     )
 
     # --- Training ---
