@@ -204,6 +204,18 @@ class WeldDefectModule(pl.LightningModule):
         # Modell
         self.model = WeldDefectResNet(num_classes=NUM_CLASSES, pretrained=pretrained)
 
+        # Eingaben früh validieren, damit es später nicht zu
+        # Shape-Mismatches oder Division-by-zero in den Klassengewichten kommt.
+        if len(class_counts) != NUM_CLASSES:
+            raise ValueError(
+                f"class_counts muss genau {NUM_CLASSES} Einträge für [CR, LP, PO, ND] "
+                f"enthalten, erhalten: {class_counts}"
+            )
+        if any(count <= 0 for count in class_counts):
+            raise ValueError(
+                f"class_counts muss nur positive Werte > 0 enthalten, erhalten: {class_counts}"
+            )
+
         # Klassengewichte berechnen — genutzt von beiden Loss-Varianten
         weights = compute_class_weights(class_counts)
 
