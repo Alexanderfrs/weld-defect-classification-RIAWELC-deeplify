@@ -88,9 +88,8 @@ class WeldDefectResNet(nn.Module):
         in_features: int = backbone.fc.in_features  # = 2048
         backbone.fc = nn.Linear(in_features, num_classes)
 
-        # Backbone als Instanzvariable speichern
-        # (nicht self.backbone = backbone, weil wir die ursprüngliche
-        # ResNet-Struktur für freeze/unfreeze beibehalten wollen)
+        # Backbone als Instanzvariable speichern, damit freeze/unfreeze
+        # direkt auf das ResNet-Modul zugreifen können.
         self.backbone = backbone
 
     # ------------------------------------------------------------------
