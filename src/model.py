@@ -6,6 +6,7 @@ Aufbau:
   2. Ersten Conv-Layer auf 1 Kanal (Graustufenbild) anpassen
   3. Letzten Fully-Connected Layer auf 4 Klassen anpassen
   4. freeze_backbone() / unfreeze_backbone() für zweistufiges Training
+  5. WeldDefectModule: LightningModule für Training, Validation, Optimizer
 
 Architekturentscheid: Warum ResNet50?
   - Bewährt, gut dokumentiert, klare Schichtstruktur
@@ -16,8 +17,14 @@ Architekturentscheid: Warum ResNet50?
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+import pytorch_lightning as pl
+import torchmetrics
 from torchvision import models
 from torchvision.models import ResNet50_Weights
+
+from .losses import FocalLoss, compute_class_weights
+from .dataset import CLASS_NAMES
 
 # Anzahl Klassen im RIAWELC-Datensatz: CR, LP, PO, ND
 NUM_CLASSES: int = 4
@@ -157,6 +164,214 @@ class WeldDefectResNet(nn.Module):
 
 
 # ------------------------------------------------------------------
+# Lightning Module
+# ------------------------------------------------------------------
+
+class WeldDefectModule(pl.LightningModule):
+    """
+    LightningModule für den RIAWELC-Klassifikator.
+
+    Kapselt Modell, Loss, Metriken, Optimizer und LR-Scheduler.
+    Der Lightning Trainer ruft die Methoden dieser Klasse automatisch
+    auf — wir schreiben keine manuelle Trainingsschleife mehr.
+
+    Args:
+        class_counts:  Anzahl Samples pro Klasse [CR, LP, PO, ND].
+                       Wird für Focal Loss α und Weighted CE genutzt.
+        loss_type:     "focal" oder "ce" (Weighted Cross-Entropy).
+        lr:            Initiale Lernrate für AdamW.
+        weight_decay:  L2-Regularisierung (AdamW-Parameter).
+        gamma:         Fokussierungsparameter für Focal Loss.
+        max_epochs:    Epochenanzahl — bestimmt den Cosine-Annealing-Zyklus.
+        pretrained:    ImageNet-Gewichte für den Backbone laden.
+    """
+
+    def __init__(
+        self,
+        class_counts: list[int],
+        loss_type: str = "focal",
+        lr: float = 1e-3,
+        weight_decay: float = 1e-4,
+        gamma: float = 2.0,
+        max_epochs: int = 10,
+        pretrained: bool = True,
+    ) -> None:
+        super().__init__()
+        # Alle __init__-Argumente als self.hparams speichern.
+        # Lightning loggt sie automatisch zu W&B — jeder Run ist damit
+        # vollständig reproduzierbar, auch Monate später.
+        self.save_hyperparameters()
+
+        # Modell
+        self.model = WeldDefectResNet(num_classes=NUM_CLASSES, pretrained=pretrained)
+
+        # Klassengewichte berechnen — genutzt von beiden Loss-Varianten
+        weights = compute_class_weights(class_counts)
+
+        # Loss-Funktion wählen
+        if loss_type == "focal":
+            # Focal Loss mit α (inverse Klassenfrequenz) und γ
+            self.criterion = FocalLoss(alpha=weights, gamma=gamma)
+        elif loss_type == "ce":
+            # Weighted Cross-Entropy — einfacherer Baseline-Loss
+            # register_buffer damit weights bei .to(device) mitwandert;
+            # hier speichern wir es direkt im Modul für nn.CrossEntropyLoss
+            self.register_buffer("ce_weights", weights)
+            self.criterion = None  # wird in forward-Methoden genutzt
+        else:
+            raise ValueError(f"loss_type muss 'focal' oder 'ce' sein, nicht '{loss_type}'")
+
+        # --- Metriken (torchmetrics) ---
+        # Warum torchmetrics statt manueller Berechnung?
+        # torchmetrics akkumuliert Predictions über den gesamten Split,
+        # bevor es die Metrik berechnet. Manuell würde man Batch-Metriken
+        # mitteln — das gibt bei unterschiedlichen Batch-Größen falsche Werte.
+        num_classes = NUM_CLASSES
+
+        # Accuracy: Anteil korrekt klassifizierter Samples
+        self.train_acc = torchmetrics.Accuracy(task="multiclass", num_classes=num_classes)
+        self.val_acc   = torchmetrics.Accuracy(task="multiclass", num_classes=num_classes)
+
+        # Per-Class Recall: Für jede Klasse separat — safety-critical!
+        # average=None → gibt einen Wert pro Klasse zurück (kein Mitteln)
+        self.val_recall = torchmetrics.Recall(
+            task="multiclass", num_classes=num_classes, average=None
+        )
+
+    # ------------------------------------------------------------------
+    # Hilfsmethode: Loss berechnen (beide Loss-Typen)
+    # ------------------------------------------------------------------
+
+    def _compute_loss(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        if self.hparams.loss_type == "focal":
+            return self.criterion(logits, targets)
+        # Weighted CE: weight muss auf demselben Device wie logits liegen
+        return F.cross_entropy(logits, targets, weight=self.ce_weights)
+
+    # ------------------------------------------------------------------
+    # Training Step
+    # ------------------------------------------------------------------
+
+    def training_step(
+        self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int
+    ) -> torch.Tensor:
+        """
+        Wird für jeden Trainings-Batch aufgerufen.
+
+        Lightning übernimmt: Device-Transfer, zero_grad(), backward(),
+        optimizer.step(). Wir liefern nur den Loss zurück.
+
+        Args:
+            batch:     Tuple (images, labels) — bereits auf dem richtigen Device.
+            batch_idx: Index des Batches in der Epoche (meist nicht gebraucht).
+
+        Returns:
+            Loss-Tensor — Lightning ruft darauf .backward() auf.
+        """
+        images, labels = batch
+        logits = self.model(images)
+        loss   = self._compute_loss(logits, labels)
+
+        # Predictions für Accuracy: argmax über Klassen-Dimension
+        preds = logits.argmax(dim=1)
+        self.train_acc.update(preds, labels)
+
+        # on_step=False, on_epoch=True: Wert am Epochenende loggen (nicht pro Batch)
+        # prog_bar=True: erscheint im Fortschrittsbalken
+        self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/acc",  self.train_acc, on_step=False, on_epoch=True, prog_bar=True)
+
+        return loss
+
+    # ------------------------------------------------------------------
+    # Validation Step
+    # ------------------------------------------------------------------
+
+    def validation_step(
+        self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int
+    ) -> None:
+        """
+        Wird für jeden Validierungs-Batch aufgerufen.
+
+        Kein Gradient-Tracking (Lightning macht torch.no_grad() automatisch).
+        Wir berechnen Loss + Accuracy + per-class Recall.
+        """
+        images, labels = batch
+        logits = self.model(images)
+        loss   = self._compute_loss(logits, labels)
+
+        preds = logits.argmax(dim=1)
+        self.val_acc.update(preds, labels)
+        self.val_recall.update(preds, labels)
+
+        # val/loss ist das Kriterium für ModelCheckpoint und EarlyStopping
+        self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/acc",  self.val_acc, on_step=False, on_epoch=True, prog_bar=True)
+
+    def on_validation_epoch_end(self) -> None:
+        """
+        Wird am Ende jeder Validierungs-Epoche aufgerufen.
+
+        Hier loggen wir den per-class Recall — nach dem Akkumulieren über
+        alle Val-Batches (deshalb nicht in validation_step).
+        """
+        # recall hat Shape (num_classes,) — einen Wert pro Klasse
+        recall_per_class = self.val_recall.compute()
+        for class_idx, class_name in enumerate(CLASS_NAMES):
+            self.log(f"val/recall_{class_name}", recall_per_class[class_idx], prog_bar=False)
+        self.val_recall.reset()
+
+    # ------------------------------------------------------------------
+    # Optimizer + LR Scheduler
+    # ------------------------------------------------------------------
+
+    def configure_optimizers(self):
+        """
+        Definiert Optimizer und LR-Scheduler.
+
+        AdamW: Wie Adam, aber Weight-Decay ist vom adaptiven Term entkoppelt.
+               Stabiler beim Finetuning von vortrainierten Modellen.
+
+        CosineAnnealingLR: Senkt die LR von lr_max bis ~0 nach einem
+               Cosinus-Verlauf über T_max Epochen. Kein abruptes Abfallen,
+               das Modell konvergiert sanft ins Minimum.
+
+        Returns:
+            Dict mit "optimizer" und "lr_scheduler" — Lightning-Konvention.
+        """
+        optimizer = torch.optim.AdamW(
+            # Nur trainierbare Parameter (freeze_backbone() berücksichtigt)
+            filter(lambda p: p.requires_grad, self.model.parameters()),
+            lr=self.hparams.lr,
+            weight_decay=self.hparams.weight_decay,
+        )
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=self.hparams.max_epochs,  # Volle Cosinus-Periode = max_epochs
+            eta_min=1e-6,                    # Untergrenze der LR
+        )
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {"scheduler": scheduler, "interval": "epoch"},
+        }
+
+    # ------------------------------------------------------------------
+    # Freeze / Unfreeze Convenience-Methoden (delegieren ans Modell)
+    # ------------------------------------------------------------------
+
+    def freeze_backbone(self) -> None:
+        """Friert den ResNet-Backbone ein (nur conv1 + fc trainierbar)."""
+        self.model.freeze_backbone()
+        # Optimizer neu konfigurieren — er muss die neuen requires_grad kennen
+        self.trainer.strategy.setup_optimizers(self.trainer)
+
+    def unfreeze_backbone(self) -> None:
+        """Taut den gesamten Backbone auf — für Finetuning-Phase."""
+        self.model.unfreeze_backbone()
+        self.trainer.strategy.setup_optimizers(self.trainer)
+
+
+# ------------------------------------------------------------------
 # Schnelltest — python src/model.py
 # ------------------------------------------------------------------
 
@@ -191,6 +406,40 @@ if __name__ == "__main__":
     trainable_all = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"\nParameter nach unfreeze_backbone():")
     print(f"  Trainierbar: {trainable_all:>10,} (sollte gleich Gesamt sein)")
+
+    print("\nAlle WeldDefectResNet-Tests bestanden.")
+
+    # ------------------------------------------------------------------
+    # WeldDefectModule Schnelltest
+    # ------------------------------------------------------------------
+    print("\n--- WeldDefectModule ---")
+
+    # Klassenverteilung aus der Datenexploration
+    class_counts = [1200, 3800, 2100, 17307]
+
+    module = WeldDefectModule(
+        class_counts=class_counts,
+        loss_type="focal",
+        lr=1e-3,
+        max_epochs=10,
+    )
+    print(f"LightningModule erstellt: loss_type={module.hparams.loss_type}, lr={module.hparams.lr}")
+
+    # Simulierter Batch: 4 Bilder, 1 Kanal, 224×224
+    dummy_images  = torch.randn(4, 1, 224, 224)
+    dummy_labels  = torch.tensor([0, 1, 2, 3])
+    dummy_batch   = (dummy_images, dummy_labels)
+
+    # training_step testen (ohne echten Trainer)
+    module.model.eval()
+    loss = module.training_step(dummy_batch, batch_idx=0)
+    print(f"training_step loss: {loss.item():.4f} (Tensor: {loss.shape})")
+    assert loss.ndim == 0, "Loss sollte ein Skalar sein!"
+
+    # CE-Variante testen
+    module_ce = WeldDefectModule(class_counts=class_counts, loss_type="ce")
+    loss_ce = module_ce.training_step(dummy_batch, batch_idx=0)
+    print(f"CE-Variante loss:   {loss_ce.item():.4f}")
 
     print("\nAlle Tests bestanden.")
     sys.exit(0)
