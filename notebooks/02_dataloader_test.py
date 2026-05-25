@@ -6,7 +6,9 @@ Zweck dieses Skripts:
   - Visuell prüfen, ob Augmentationen plausibel aussehen
   - Batch-Shape und Wertebereich bestätigen
 
-Ausgabe: outputs/plots/04_dataloader_batch.png
+Ausgabe:
+  - outputs/plots/04_dataloader_batch_train.png
+  - outputs/plots/04_dataloader_batch_val.png
 """
 
 from pathlib import Path
