@@ -11,6 +11,7 @@ Was hier NICHT passiert:
   - Modell-Logik, Loss-Berechnung, Training
 """
 
+import os
 from pathlib import Path
 from typing import Callable
 
@@ -25,7 +26,10 @@ from PIL import Image
 
 # Gleiche Pfad-Logik wie in der Datenexploration — DATA_ROOT zeigt auf den
 # Ordner, der die Unterordner "training", "validation", "testing" enthält.
-DATA_ROOT = Path(__file__).parent.parent / "data" / "RIAWELC" / "images" / "DB - Copy"
+DATA_ROOT = Path(
+    os.environ.get("RIAWELC_DATA_ROOT")
+    or Path(__file__).parent.parent / "data" / "RIAWELC" / "images" / "DB - Copy"
+)
 
 # Ordnernamen im Dateisystem → Integer-Label (0-3) für PyTorch
 # Reihenfolge ist alphabetisch, damit sie stabil und reproduzierbar ist.

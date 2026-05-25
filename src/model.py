@@ -242,10 +242,14 @@ class WeldDefectModule(pl.LightningModule):
         # Accuracy: Anteil korrekt klassifizierter Samples
         self.train_acc = torchmetrics.Accuracy(task="multiclass", num_classes=num_classes)
         self.val_acc   = torchmetrics.Accuracy(task="multiclass", num_classes=num_classes)
+        self.test_acc  = torchmetrics.Accuracy(task="multiclass", num_classes=num_classes)
 
         # Per-Class Recall: Für jede Klasse separat — safety-critical!
         # average=None → gibt einen Wert pro Klasse zurück (kein Mitteln)
         self.val_recall = torchmetrics.Recall(
+            task="multiclass", num_classes=num_classes, average=None
+        )
+        self.test_recall = torchmetrics.Recall(
             task="multiclass", num_classes=num_classes, average=None
         )
 
@@ -319,6 +323,26 @@ class WeldDefectModule(pl.LightningModule):
         self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("val/acc",  self.val_acc, on_step=False, on_epoch=True, prog_bar=True)
 
+    def test_step(
+        self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int
+    ) -> None:
+        """
+        Wird von trainer.test() aufgerufen — spiegelt validation_step.
+
+        Nutzt dieselbe Logik wie die Validierung, loggt aber unter "test/..."
+        damit Validation- und Test-Metriken im W&B-Dashboard getrennt sind.
+        """
+        images, labels = batch
+        logits = self.model(images)
+        loss   = self._compute_loss(logits, labels)
+
+        preds = logits.argmax(dim=1)
+        self.test_acc.update(preds, labels)
+        self.test_recall.update(preds, labels)
+
+        self.log("test/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("test/acc",  self.test_acc, on_step=False, on_epoch=True, prog_bar=True)
+
     def on_validation_epoch_end(self) -> None:
         """
         Wird am Ende jeder Validierungs-Epoche aufgerufen.
@@ -331,6 +355,18 @@ class WeldDefectModule(pl.LightningModule):
         for class_idx, class_name in enumerate(CLASS_NAMES):
             self.log(f"val/recall_{class_name}", recall_per_class[class_idx], prog_bar=False)
         self.val_recall.reset()
+
+    def on_test_epoch_end(self) -> None:
+        """
+        Wird am Ende der Test-Epoche aufgerufen.
+
+        Loggt per-class Recall für den Test-Split nach der Akkumulation
+        über alle Test-Batches.
+        """
+        recall_per_class = self.test_recall.compute()
+        for class_idx, class_name in enumerate(CLASS_NAMES):
+            self.log(f"test/recall_{class_name}", recall_per_class[class_idx], prog_bar=False)
+        self.test_recall.reset()
 
     # ------------------------------------------------------------------
     # Optimizer + LR Scheduler
