@@ -319,6 +319,26 @@ class WeldDefectModule(pl.LightningModule):
         self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("val/acc",  self.val_acc, on_step=False, on_epoch=True, prog_bar=True)
 
+    def test_step(
+        self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int
+    ) -> None:
+        """
+        Wird von trainer.test() aufgerufen — spiegelt validation_step.
+
+        Nutzt dieselbe Logik wie die Validierung, loggt aber unter "test/..."
+        damit Validation- und Test-Metriken im W&B-Dashboard getrennt sind.
+        """
+        images, labels = batch
+        logits = self.model(images)
+        loss   = self._compute_loss(logits, labels)
+
+        preds = logits.argmax(dim=1)
+        self.val_acc.update(preds, labels)
+        self.val_recall.update(preds, labels)
+
+        self.log("test/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("test/acc",  self.val_acc, on_step=False, on_epoch=True, prog_bar=True)
+
     def on_validation_epoch_end(self) -> None:
         """
         Wird am Ende jeder Validierungs-Epoche aufgerufen.

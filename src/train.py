@@ -227,7 +227,7 @@ def train(run_key: str) -> dict:
     # filename enthält Epoche und val_loss im Dateinamen für schnelle Orientierung.
     checkpoint_cb = ModelCheckpoint(
         dirpath=MODELS_DIR / cfg["run_name"],
-        filename="{epoch:02d}-{val/loss:.4f}",
+        filename="best",       # immer "best.ckpt" — wird bei Verbesserung überschrieben
         monitor="val/loss",
         mode="min",
         save_top_k=1,
