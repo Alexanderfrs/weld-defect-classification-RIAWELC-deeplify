@@ -56,7 +56,7 @@ def build_dataloaders(batch_size: int = 32, num_workers: int = 4) -> dict[str, D
             shuffle=True,          # zufällige Reihenfolge beim Training
             num_workers=num_workers,
             pin_memory=True,       # schnellerer CPU→GPU Transfer
-            persistent_workers=True,  # Worker-Prozesse zwischen Batches halten
+            persistent_workers=(num_workers > 0),  # Worker-Prozesse zwischen Batches halten
         ),
         "validation": DataLoader(
             val_ds,
@@ -64,7 +64,7 @@ def build_dataloaders(batch_size: int = 32, num_workers: int = 4) -> dict[str, D
             shuffle=False,         # deterministische Reihenfolge für Metriken
             num_workers=num_workers,
             pin_memory=True,
-            persistent_workers=True,
+            persistent_workers=(num_workers > 0),
         ),
         "testing": DataLoader(
             test_ds,
@@ -72,7 +72,7 @@ def build_dataloaders(batch_size: int = 32, num_workers: int = 4) -> dict[str, D
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
-            persistent_workers=True,
+            persistent_workers=(num_workers > 0),
         ),
     }
 
