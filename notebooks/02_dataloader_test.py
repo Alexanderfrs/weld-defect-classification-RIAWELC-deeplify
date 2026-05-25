@@ -116,13 +116,15 @@ def plot_batch(loader: DataLoader, title: str, out_path: Path, n_images: int = 1
     images, labels = next(iter(loader))
 
     cols = 4
-    rows = n_images // cols
+    rows = int(np.ceil(n_images / cols))
     fig, axes = plt.subplots(rows, cols, figsize=(cols * 3, rows * 3))
+    axes = np.atleast_1d(axes).reshape(-1)
+    max_images = min(n_images, len(images))
 
-    for i in range(n_images):
-        ax = axes[i // cols, i % cols]
-        ax.imshow(denormalize(images[i]), cmap="gray", vmin=0, vmax=1)
-        ax.set_title(CLASS_NAMES[labels[i].item()], fontsize=10)
+    for i, ax in enumerate(axes):
+        if i < max_images:
+            ax.imshow(denormalize(images[i]), cmap="gray", vmin=0, vmax=1)
+            ax.set_title(CLASS_NAMES[labels[i].item()], fontsize=10)
         ax.axis("off")
 
     fig.suptitle(title, fontsize=13, y=1.01)
