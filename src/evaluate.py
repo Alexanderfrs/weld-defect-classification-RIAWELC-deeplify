@@ -65,11 +65,9 @@ def run_inference(ckpt_path: Path, batch_size: int = 64) -> dict:
     module.eval()
     module.to(device)
 
-    # Use the validation split for honest evaluation with the old (biased) checkpoint.
-    # The original testing/ patches are duplicates of training patches, so evaluating
-    # on validation/ (6101 clean patches, zero overlap with training) is more honest.
-    # After retraining with build_clean_splits(), switch this back to split="testing".
-    test_ds = WeldDefectDataset(split="validation", transform=get_val_transforms())
+    # Testing split is now a genuine hold-out: build_clean_splits() removed the 2443
+    # duplicate patches from training, so the model never saw these test patches.
+    test_ds = WeldDefectDataset(split="testing", transform=get_val_transforms())
     loader  = DataLoader(
         test_ds,
         batch_size=batch_size,
