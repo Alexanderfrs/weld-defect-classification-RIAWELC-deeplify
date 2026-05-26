@@ -1,19 +1,14 @@
 """
 Split-Hilfsfunktionen für RIAWELC.
 
-Zwei Funktionen:
+build_clean_splits() wird für das Training verwendet:
 
-1. build_clean_splits()  ← wird für das Training verwendet
-   Problem: Der originale training/-Ordner enthält 2.443 Patches, die
-   byte-identisch auch im testing/-Ordner vorkommen. Ein Modell, das auf
-   training/ trainiert und auf testing/ evaluiert wird, sieht also
-   Testbilder bereits im Training — 100 % Accuracy ist die Folge.
-   Lösung: Beim Laden des Training-Sets werden diese Duplikate herausgefiltert.
-   Ergebnis: 13.420 Trainings-Patches (statt 15.863), 2.443 echte Test-Patches.
-
-2. build_weld_level_splits()  ← experimentell, für spätere Analyse
-   Teilt alle Patches nach Weld-ID auf, damit kein Schweißstück in mehr
-   als einem Split vorkommt.
+- Problem: Der originale training/-Ordner enthält 2.443 Patches, die
+  byte-identisch auch im testing/-Ordner vorkommen. Ein Modell, das auf
+  training/ trainiert und auf testing/ evaluiert wird, sieht also
+  Testbilder bereits im Training — 100 % Accuracy ist die Folge.
+- Lösung: Beim Laden des Training-Sets werden diese Duplikate herausgefiltert.
+- Ergebnis: 13.420 Trainings-Patches (statt 15.863), 2.443 echte Test-Patches.
 """
 
 from pathlib import Path
@@ -101,5 +96,4 @@ def _print_split_summary(
         counts = [sum(1 for _, l in samples if l == i) for i in range(len(CLASS_NAMES))]
         class_str = ", ".join(f"{n}={c}" for n, c in zip(CLASS_NAMES, counts))
         print(f"  {name:10}: {len(samples):>6} Patches  [{class_str}]")
-
 
