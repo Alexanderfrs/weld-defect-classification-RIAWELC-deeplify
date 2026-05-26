@@ -84,7 +84,10 @@ def build_clean_splits(
     # Sicherheits-Check: kein Patch in Training UND Test
     train_fnames = {(p.parent.name, p.name) for p, _ in train_samples}
     overlap = len(train_fnames & test_fnames)
-    assert overlap == 0, f"Noch {overlap} Duplikate zwischen Train und Test!"
+    if overlap != 0:
+        raise RuntimeError(
+            f"Noch {overlap} Duplikate zwischen Train und Test!"
+        )
 
     _print_split_summary(train_samples, val_samples, test_samples)
     return train_samples, val_samples, test_samples
