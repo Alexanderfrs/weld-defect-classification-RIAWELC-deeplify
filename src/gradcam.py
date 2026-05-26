@@ -80,6 +80,7 @@ def collect_samples(
 
     for imgs, labels in loader:
         imgs = imgs.to(device)
+        labels = labels.to(device)
         logits = module.model(imgs)
         probs  = torch.softmax(logits, dim=1)
         preds  = probs.argmax(dim=1)
