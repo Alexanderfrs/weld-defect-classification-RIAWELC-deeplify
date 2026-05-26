@@ -109,9 +109,12 @@ def compute_gradcam(
 ) -> np.ndarray:
     """Run Grad-CAM for a single image tensor, returns (H, W) heatmap in [0,1]."""
     from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
-    inp = tensor.unsqueeze(0)
+
+    model_device = next(model.parameters()).device
+    inp = tensor.unsqueeze(0).to(model_device)
     targets = [ClassifierOutputTarget(target_class)]
-    grayscale_cam = cam(input_tensor=inp, targets=targets)
+    with torch.enable_grad():
+        grayscale_cam = cam(input_tensor=inp, targets=targets)
     return grayscale_cam[0]
 
 
