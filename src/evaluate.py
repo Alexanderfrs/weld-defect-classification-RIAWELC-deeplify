@@ -65,7 +65,11 @@ def run_inference(ckpt_path: Path, batch_size: int = 64) -> dict:
     module.eval()
     module.to(device)
 
-    test_ds = WeldDefectDataset(split="testing", transform=get_val_transforms())
+    # Use the validation split for honest evaluation with the old (biased) checkpoint.
+    # The original testing/ patches are duplicates of training patches, so evaluating
+    # on validation/ (6101 clean patches, zero overlap with training) is more honest.
+    # After retraining with build_clean_splits(), switch this back to split="testing".
+    test_ds = WeldDefectDataset(split="validation", transform=get_val_transforms())
     loader  = DataLoader(
         test_ds,
         batch_size=batch_size,
@@ -74,7 +78,7 @@ def run_inference(ckpt_path: Path, batch_size: int = 64) -> dict:
         pin_memory=device.type == "cuda",
     )
 
-    print(f"Test samples: {len(test_ds)}")
+    print(f"Evaluation samples: {len(test_ds)}")
 
     all_preds, all_labels, all_probs = [], [], []
 

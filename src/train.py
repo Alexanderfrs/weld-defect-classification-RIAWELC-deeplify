@@ -30,6 +30,7 @@ from torch.utils.data import DataLoader
 
 from .dataset import CLASS_NAMES, WeldDefectDataset, get_train_transforms, get_val_transforms
 from .model import WeldDefectModule
+from .splits import build_clean_splits
 
 # ---------------------------------------------------------------------------
 # Pfade
@@ -116,15 +117,21 @@ def build_dataloaders(cfg: dict) -> tuple[DataLoader, DataLoader, DataLoader]:
     """
     Erstellt Train-, Val- und Test-DataLoader aus dem RIAWELC-Datensatz.
 
+    Verwendet build_clean_splits(): Die 2.443 Duplikate (Patches die im
+    originalen training/- UND testing/-Ordner vorkommen) werden aus dem
+    Training-Set entfernt, sodass Test-Patches wirklich unseen sind.
+
     Args:
         cfg: Run-Config-Dict (braucht batch_size und num_workers).
 
     Returns:
         Tuple (train_loader, val_loader, test_loader).
     """
-    train_ds = WeldDefectDataset(split="training",   transform=get_train_transforms())
-    val_ds   = WeldDefectDataset(split="validation", transform=get_val_transforms())
-    test_ds  = WeldDefectDataset(split="testing",    transform=get_val_transforms())
+    train_samples, val_samples, test_samples = build_clean_splits()
+
+    train_ds = WeldDefectDataset(samples=train_samples, transform=get_train_transforms())
+    val_ds   = WeldDefectDataset(samples=val_samples,   transform=get_val_transforms())
+    test_ds  = WeldDefectDataset(samples=test_samples,  transform=get_val_transforms())
 
     # pin_memory=True: Daten im CPU-RAM als "pinned" (nicht-auslagerbar) halten.
     # Das beschleunigt den Transfer zur GPU, weil kein Extra-Kopier-Schritt nötig.
