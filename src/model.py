@@ -26,7 +26,7 @@ from torchvision.models import ResNet50_Weights
 from .losses import FocalLoss, compute_class_weights
 from .dataset import CLASS_NAMES
 
-# Anzahl Klassen im RIAWELC-Datensatz: CR, LP, PO, ND
+# Anzahl Klassen im RIAWELC-Datensatz: CR, PO, LP, ND
 NUM_CLASSES: int = 4
 
 
@@ -175,7 +175,7 @@ class WeldDefectModule(pl.LightningModule):
     auf — wir schreiben keine manuelle Trainingsschleife mehr.
 
     Args:
-        class_counts:  Anzahl Samples pro Klasse [CR, LP, PO, ND].
+        class_counts:  Anzahl Samples pro Klasse [CR, PO, LP, ND].
                        Wird für Focal Loss α und Weighted CE genutzt.
         loss_type:     "focal" oder "ce" (Weighted Cross-Entropy).
         lr:            Initiale Lernrate für AdamW.
@@ -208,7 +208,7 @@ class WeldDefectModule(pl.LightningModule):
         # Shape-Mismatches oder Division-by-zero in den Klassengewichten kommt.
         if len(class_counts) != NUM_CLASSES:
             raise ValueError(
-                f"class_counts muss genau {NUM_CLASSES} Einträge für [CR, LP, PO, ND] "
+                f"class_counts muss genau {NUM_CLASSES} Einträge für [CR, PO, LP, ND] "
                 f"enthalten, erhalten: {class_counts}"
             )
         if any(count <= 0 for count in class_counts):

@@ -34,15 +34,15 @@ DATA_ROOT = Path(
 # Ordnernamen im Dateisystem → Integer-Label (0-3) für PyTorch
 # Reihenfolge ist alphabetisch, damit sie stabil und reproduzierbar ist.
 CLASS_MAP: dict[str, int] = {
-    "Difetto1": 0,   # CR — Cracks / Risse
-    "Difetto2": 1,   # LP — Lack of Penetration
-    "Difetto4": 2,   # PO — Porosity / Poren
+    "Difetto1": 0,   # CR — Cracks / Risse (unregelmäßige dunkle Linien)
+    "Difetto2": 1,   # PO — Porosity / Poren (runde dunkle Flecken)
+    "Difetto4": 2,   # LP — Lack of Penetration (horizontaler dunkler Streifen)
     "NoDifetto": 3,  # ND — No Defect
 }
 
 # Klartext-Namen in der gleichen Reihenfolge (Index = Label-Integer)
 # Nützlich für Plots, Confusion Matrix, W&B-Logs.
-CLASS_NAMES: list[str] = ["CR", "LP", "PO", "ND"]
+CLASS_NAMES: list[str] = ["CR", "PO", "LP", "ND"]
 
 # Normalisierungsparameter aus der Datenexploration (Training-Split, [0,1])
 # mean=0.6023, std=0.1951 — ermittelt in notebooks/01_data_exploration.py
@@ -135,29 +135,34 @@ class WeldDefectDataset(Dataset):
 
     Args:
         split:     Welcher Split — "training", "validation" oder "testing".
+                   Wird ignoriert wenn `samples` übergeben wird.
         transform: Eine torchvision.transforms.Compose-Pipeline.
                    Wenn None: nur ToTensor() ohne Normalisierung (für Tests).
         data_root: Pfad zum Datensatz-Wurzelverzeichnis. Standard: DATA_ROOT.
+        samples:   Vorberechnete Liste von (Path, label_int) Tupeln.
+                   Wenn übergeben, wird split/data_root ignoriert (weld-level split Pfad).
     """
 
     def __init__(
         self,
-        split: str,
+        split: str | None = None,
         transform: Callable | None = None,
         data_root: Path = DATA_ROOT,
+        samples: list[tuple[Path, int]] | None = None,
     ) -> None:
-        if split not in VALID_SPLITS:
-            raise ValueError(f"split muss einer von {VALID_SPLITS} sein, nicht '{split}'")
-
-        self.split = split
         self.data_root = data_root
-
-        # Wenn keine Transform übergeben: minimale Fallback-Pipeline
-        # (ToTensor allein, damit __getitem__ immer einen Tensor zurückgibt)
         self.transform = transform if transform is not None else transforms.ToTensor()
 
-        # Alle (pfad, label) Paare einlesen — Bilder werden noch NICHT geöffnet
-        self.samples: list[tuple[Path, int]] = self._load_samples()
+        if samples is not None:
+            # Weld-level split: vorberechnete Sample-Liste direkt verwenden
+            self.split = "custom"
+            self.samples = samples
+        else:
+            if split not in VALID_SPLITS:
+                raise ValueError(f"split muss einer von {VALID_SPLITS} sein, nicht '{split}'")
+            self.split = split
+            # Alle (pfad, label) Paare einlesen — Bilder werden noch NICHT geöffnet
+            self.samples: list[tuple[Path, int]] = self._load_samples()
 
     def _load_samples(self) -> list[tuple[Path, int]]:
         """
@@ -203,7 +208,7 @@ class WeldDefectDataset(Dataset):
         Returns:
             Tuple aus:
             - tensor: FloatTensor der Form (1, 224, 224), normalisiert
-            - label:  Integer 0-3 (CR=0, LP=1, PO=2, ND=3)
+            - label:  Integer 0-3 (CR=0, PO=1, LP=2, ND=3)
         """
         img_path, label = self.samples[idx]
 
