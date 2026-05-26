@@ -1,0 +1,36 @@
+{
+  "checkpoint": "/home/alex/weld-defect-classification-RIAWELC-deeplify/outputs/models/finetune-ce-unfrozen/best.ckpt",
+  "n_samples": 2443,
+  "accuracy": 0.9987720016373312,
+  "per_class": {
+    "CR": {
+      "precision": 0.9986928104575163,
+      "recall": 0.9986928104575163,
+      "f1-score": 0.9986928104575163,
+      "support": 765.0
+    },
+    "PO": {
+      "precision": 0.9984177215189873,
+      "recall": 0.9984177215189873,
+      "f1-score": 0.9984177215189873,
+      "support": 632.0
+    },
+    "LP": {
+      "precision": 0.9977628635346756,
+      "recall": 1.0,
+      "f1-score": 0.9988801791713325,
+      "support": 446.0
+    },
+    "ND": {
+      "precision": 1.0,
+      "recall": 0.9983333333333333,
+      "f1-score": 0.9991659716430359,
+      "support": 600.0
+    }
+  },
+  "macro_avg": {
+    "precision": 0.9987183488777949,
+    "recall": 0.9988609663274592,
+    "f1-score": 0.998789170697718
+  }
+}

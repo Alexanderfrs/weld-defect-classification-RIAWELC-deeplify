@@ -149,8 +149,8 @@ if __name__ == "__main__":
     # 3. Klassengewichte berechnen
     class_counts = [1200, 3800, 2100, 17307]  # aus RIAWELC-Exploration
     weights = compute_class_weights(class_counts)
-    print(f"\nKlassengewichte (CR, LP, PO, ND):")
-    for name, w in zip(["CR", "LP", "PO", "ND"], weights):
+    print(f"\nKlassengewichte (CR, PO, LP, ND):")
+    for name, w in zip(["CR", "PO", "LP", "ND"], weights):
         print(f"  {name}: {w:.3f}")
     print(f"  Mittelwert: {weights.mean():.3f} (sollte ≈ 1.0 sein)")
 
