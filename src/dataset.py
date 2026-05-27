@@ -140,7 +140,7 @@ class WeldDefectDataset(Dataset):
                    Wenn None: nur ToTensor() ohne Normalisierung (für Tests).
         data_root: Pfad zum Datensatz-Wurzelverzeichnis. Standard: DATA_ROOT.
         samples:   Vorberechnete Liste von (Path, label_int) Tupeln.
-                   Wenn übergeben, wird split/data_root ignoriert (weld-level split Pfad).
+                   Wenn übergeben, wird split/data_root ignoriert (z.B. build_clean_splits()).
     """
 
     def __init__(
@@ -154,7 +154,7 @@ class WeldDefectDataset(Dataset):
         self.transform = transform if transform is not None else transforms.ToTensor()
 
         if samples is not None:
-            # Weld-level split: vorberechnete Sample-Liste direkt verwenden
+            # Vorberechnete Sample-Liste direkt verwenden (z.B. build_clean_splits())
             self.split = "custom"
             self.samples = samples
         else:

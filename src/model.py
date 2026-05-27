@@ -402,20 +402,6 @@ class WeldDefectModule(pl.LightningModule):
             "lr_scheduler": {"scheduler": scheduler, "interval": "epoch"},
         }
 
-    # ------------------------------------------------------------------
-    # Freeze / Unfreeze Convenience-Methoden (delegieren ans Modell)
-    # ------------------------------------------------------------------
-
-    def freeze_backbone(self) -> None:
-        """Friert den ResNet-Backbone ein (nur conv1 + fc trainierbar)."""
-        self.model.freeze_backbone()
-        # Optimizer neu konfigurieren — er muss die neuen requires_grad kennen
-        self.trainer.strategy.setup_optimizers(self.trainer)
-
-    def unfreeze_backbone(self) -> None:
-        """Taut den gesamten Backbone auf — für Finetuning-Phase."""
-        self.model.unfreeze_backbone()
-        self.trainer.strategy.setup_optimizers(self.trainer)
 
 
 # ------------------------------------------------------------------
