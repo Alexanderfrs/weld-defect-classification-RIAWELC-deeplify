@@ -14,6 +14,7 @@ dependencies = [
     "matplotlib>=3.9.0",      # Alle Plots: Confusion Matrix, Histogramme, Bild-Grids
     "Pillow>=10.0.0",         # Bilder laden (PNG → PIL Image → Tensor)
     "numpy>=1.26.0",          # Array-Operationen für Evaluation und Plotting
+    "huggingface-hub>=1.16.4",
 ]
 
 # PyTorch CUDA 12.4 Index (kompatibel mit GTX 1650 Ti + Treiber 595)
