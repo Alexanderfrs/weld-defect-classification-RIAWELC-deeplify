@@ -48,10 +48,10 @@ def load_model(weights_path: Path, device: torch.device) -> WeldDefectResNet:
         Modell im eval()-Modus auf dem angegebenen Device.
     """
     model = WeldDefectResNet(pretrained=False)
-    state = torch.load(weights_path, map_location=device, weights_only=True)
+    state = torch.load(weights_path, map_location="cpu", weights_only=True)
     model.load_state_dict(state)
-    model.eval()
     model.to(device)
+    model.eval()
     return model
 
 
