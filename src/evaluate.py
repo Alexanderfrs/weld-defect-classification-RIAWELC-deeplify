@@ -1,13 +1,14 @@
 """
-Phase 5 Evaluation — RIAWELC Weld Defect Classifier
+Phase 5 — Evaluation des RIAWELC-Klassifikators
 
-Loads the best checkpoint (finetune-ce-unfrozen/best.ckpt) and runs a full
-evaluation on the pre-defined test split. Produces:
+Lädt den besten Checkpoint (finetune-ce-unfrozen/best.ckpt) und evaluiert
+ihn auf dem bereinigten Test-Split (2.443 Patches, kein Overlap mit Training).
 
-  outputs/plots/confusion_matrix.png       — normalised heatmap
-  outputs/plots/classification_report.png  — per-class Precision / Recall / F1
-  outputs/plots/confidence_distribution.png — softmax-confidence: correct vs wrong
-  outputs/evaluation_results.json          — raw numbers for downstream use
+Outputs:
+  outputs/plots/confusion_matrix.png        — normalisierte Heatmap
+  outputs/plots/classification_report.png   — Precision / Recall / F1 pro Klasse
+  outputs/plots/confidence_distribution.png — Softmax-Konfidenz: richtig vs. falsch
+  outputs/evaluation_results.json           — Rohzahlen für weitere Verwendung
 
 Run:
   uv run python -m src.evaluate
@@ -49,24 +50,24 @@ PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 @torch.no_grad()
 def run_inference(ckpt_path: Path, batch_size: int = 64) -> dict:
     """
-    Loads checkpoint, runs inference on the test split.
+    Lädt den Checkpoint und führt Inferenz auf dem Test-Split durch.
 
-    Returns dict with:
-      all_preds    — (N,) int array of predicted class indices
-      all_labels   — (N,) int array of ground-truth labels
-      all_confs    — (N,) float array of max softmax probability
-      all_probs    — (N, 4) float array of full softmax distribution
+    Rückgabe-Dict:
+      all_preds    — (N,) int-Array mit vorhergesagten Klassen-Indizes
+      all_labels   — (N,) int-Array mit Ground-Truth-Labels
+      all_confs    — (N,) float-Array mit max. Softmax-Wahrscheinlichkeit
+      all_probs    — (N, 4) float-Array mit vollständiger Softmax-Verteilung
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
-    print(f"Loading checkpoint: {ckpt_path}")
+    print(f"Lade Checkpoint: {ckpt_path}")
 
     module = WeldDefectModule.load_from_checkpoint(str(ckpt_path), map_location=device)
     module.eval()
     module.to(device)
 
-    # Testing split is now a genuine hold-out: build_clean_splits() removed the 2443
-    # duplicate patches from training, so the model never saw these test patches.
+    # Test-Split ist genuiner Hold-out: build_clean_splits() hat die 2.443
+    # Duplikate aus dem Training entfernt — das Modell hat diese Patches nie gesehen.
     test_ds = WeldDefectDataset(split="testing", transform=get_val_transforms())
     loader  = DataLoader(
         test_ds,
@@ -76,7 +77,7 @@ def run_inference(ckpt_path: Path, batch_size: int = 64) -> dict:
         pin_memory=device.type == "cuda",
     )
 
-    print(f"Evaluation samples: {len(test_ds)}")
+    print(f"Evaluierungs-Samples: {len(test_ds)}")
 
     all_preds, all_labels, all_probs = [], [], []
 
@@ -108,7 +109,7 @@ def run_inference(ckpt_path: Path, batch_size: int = 64) -> dict:
 # ---------------------------------------------------------------------------
 
 def _class_label(i: int) -> str:
-    """Return full label with index, e.g. 'CR (0)'."""
+    """Gibt Klassenname mit Index zurück, z.B. 'CR (0)'."""
     return f"{CLASS_NAMES[i]} ({i})"
 
 CLASS_LABELS = [_class_label(i) for i in range(len(CLASS_NAMES))]
@@ -135,7 +136,7 @@ def plot_confusion_matrix(preds: np.ndarray, labels: np.ndarray, save_path: Path
     ax.set_ylabel("True label", fontsize=10)
     ax.set_title("Confusion Matrix (row-normalised)", fontsize=11, pad=10)
 
-    # Annotate each cell with fraction + raw count
+    # Jede Zelle mit Anteil + absoluter Anzahl beschriften
     thresh = 0.5
     for r in range(n):
         for c in range(n):
@@ -188,7 +189,7 @@ def plot_classification_report(preds: np.ndarray, labels: np.ndarray, save_path:
     ax.legend(fontsize=9)
     ax.grid(axis="y", alpha=0.3)
 
-    # Print table to console
+    # Tabelle auf der Konsole ausgeben
     print("\n" + classification_report(labels, preds, target_names=CLASS_NAMES, zero_division=0))
 
     fig.tight_layout()
@@ -211,7 +212,7 @@ def plot_confidence_distribution(
     bins = np.linspace(0, 1, 26)
     fig, ax = plt.subplots(figsize=(7, 4))
 
-    # density=True raises RuntimeWarning when a group is empty; skip density for empty arrays
+    # density=True wirft RuntimeWarning bei leeren Arrays; für leere Gruppen überspringen
     ax.hist(correct, bins=bins, alpha=0.65, color="#55A868",
             label=f"Correct  (n={len(correct):,})", density=len(correct) > 0)
     if len(wrong) > 0:
@@ -269,19 +270,19 @@ def main(ckpt_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Evaluate a trained RIAWELC checkpoint.")
+    parser = argparse.ArgumentParser(description="Evaluiert einen trainierten RIAWELC-Checkpoint.")
     parser.add_argument(
         "--ckpt",
         type=Path,
         default=DEFAULT_CKPT,
-        help=f"Path to .ckpt file (default: {DEFAULT_CKPT})",
+        help=f"Pfad zur .ckpt-Datei (Standard: {DEFAULT_CKPT})",
     )
     args = parser.parse_args()
 
     if not args.ckpt.exists():
         raise FileNotFoundError(
-            f"Checkpoint not found: {args.ckpt}\n"
-            "Download it from Kaggle outputs and place it under outputs/models/."
+            f"Checkpoint nicht gefunden: {args.ckpt}\n"
+            "Von Kaggle-Outputs herunterladen und unter outputs/models/ ablegen."
         )
 
     main(args.ckpt)

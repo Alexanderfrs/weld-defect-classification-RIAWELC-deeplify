@@ -102,15 +102,15 @@ def collect_samples(
 
 
 def compute_gradcam(
-    model: torch.nn.Module,
     tensor: torch.Tensor,
     target_class: int,
     cam: GradCAM,
 ) -> np.ndarray:
-    """Run Grad-CAM for a single image tensor, returns (H, W) heatmap in [0,1]."""
+    """Grad-CAM für ein einzelnes Bild — gibt (H, W) Heatmap in [0,1] zurück."""
     from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
-    model_device = next(model.parameters()).device
+    # Device vom Modell holen das im cam-Objekt steckt
+    model_device = next(cam.model.parameters()).device
     inp = tensor.unsqueeze(0).to(model_device)
     targets = [ClassifierOutputTarget(target_class)]
     with torch.enable_grad():
@@ -160,7 +160,7 @@ def plot_per_class(correct: list, cam: GradCAM) -> None:
                 )
 
             # Grad-CAM overlay
-            heatmap = compute_gradcam(None, tensor, pred_lbl, cam)
+            heatmap = compute_gradcam(tensor, pred_lbl, cam)
             overlay = _overlay(tensor, heatmap)
             ax_overlay.imshow(overlay)
             ax_overlay.set_title(f"{conf*100:.1f}%", fontsize=8, pad=2)
@@ -208,7 +208,7 @@ def plot_errors(errors: list, cam: GradCAM) -> None:
         ax_orig.set_title(f"True: {CLASS_NAMES[true_lbl]}", fontsize=9)
         ax_orig.axis("off")
 
-        heatmap = compute_gradcam(None, tensor, pred_lbl, cam)
+        heatmap = compute_gradcam(tensor, pred_lbl, cam)
         overlay = _overlay(tensor, heatmap)
         ax_overlay.imshow(overlay)
         ax_overlay.set_title(f"Pred: {CLASS_NAMES[pred_lbl]}  ({conf*100:.1f}%)", fontsize=9)
