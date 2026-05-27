@@ -2,6 +2,18 @@
 
 Klassifikation von Schweißnaht-Defekten in Röntgenbildern mit ResNet50 und Transfer Learning.
 
+[![Live Demo](https://img.shields.io/badge/🤗%20Spaces-Live%20Demo-blue)](https://huggingface.co/spaces/Alexfrs/riawelc-weld-defect-classifier)
+[![W&B Report](https://img.shields.io/badge/Weights_%26_Biases-Training%20Report-FFBE00?logo=weightsandbiases&logoColor=white)](https://api.wandb.ai/links/alexanderf/y12yfubc)
+[![Model Weights](https://img.shields.io/badge/🤗%20Hub-Model%20Weights-yellow)](https://huggingface.co/Alexfrs/riawelc-weld-defect-resnet50)
+
+---
+
+## Live Demo
+
+Röntgen-Patch hochladen (oder Zufallsbeispiel laden) → Klasse + Konfidenz + Grad-CAM-Overlay in ~1 Sekunde:
+
+👉 **[https://huggingface.co/spaces/Alexfrs/riawelc-weld-defect-classifier](https://huggingface.co/spaces/Alexfrs/riawelc-weld-defect-classifier)**
+
 ---
 
 ## Datensatz
@@ -84,8 +96,6 @@ Drei Runs mit [PyTorch Lightning](https://lightning.ai/docs/pytorch/stable/) + [
 
 ## Ergebnisse
 
-[![W&B Report](https://img.shields.io/badge/Weights_%26_Biases-Training%20Report-FFBE00?logo=weightsandbiases&logoColor=white)](https://api.wandb.ai/links/alexanderf/y12yfubc)
-
 Evaluierung von `run_2_finetune` auf dem bereinigten Test-Split (2.443 Patches):
 
 | Klasse | Precision | Recall | F1 |
@@ -116,8 +126,8 @@ Für das Training wird eine GPU empfohlen:
 
 ```bash
 # Repository klonen
-git clone <repo-url>
-cd ndt-defect-classification
+git clone https://github.com/Alexanderfrs/weld-defect-classification-RIAWELC-deeplify
+cd weld-defect-classification-RIAWELC-deeplify
 
 # Python 3.12 Umgebung erstellen und Dependencies installieren
 uv venv --python 3.12 .venv

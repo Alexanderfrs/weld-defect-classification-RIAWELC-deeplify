@@ -4,6 +4,11 @@ data/
 # Trainierte Modelle & Plots (zu groß / generierbar)
 outputs/models/
 outputs/plots/
+outputs/model_weights.pth
+
+# Session-Artefakte
+Claude.md
+Tasks.md
 
 # W&B Logs
 wandb/
